@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/sayora/dev/labs/mozhi-ai && uv run ruff check --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null || true",
+            "description": "Auto-fix lint issues after file edits"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest*)",
+      "Bash(uv run ruff*)",
+      "Bash(uv run mypy*)",
+      "Bash(git *)",
+      "Bash(python *)"
+    ]
+  }
+}

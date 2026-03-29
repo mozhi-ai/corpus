@@ -1,0 +1,103 @@
+name: Daily Corpus Collection
+
+on:
+  schedule:
+    # Run daily at 4:30 AM UTC (10 AM IST)
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+    inputs:
+      hf_limit:
+        description: 'Limit docs per HuggingFace dataset'
+        required: false
+        default: '10000'
+      wiki_limit:
+        description: 'Limit Wikipedia articles'
+        required: false
+        default: '500'
+      madurai_limit:
+        description: 'Limit Project Madurai texts'
+        required: false
+        default: '50'
+
+env:
+  UV_SYSTEM_PYTHON: 1
+
+jobs:
+  collect-process-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Restore corpus state
+        uses: actions/cache@v4
+        with:
+          path: |
+            corpus/raw/*/.checkpoint
+            corpus/dedup_index/
+            corpus/models/lid.176.bin
+          key: corpus-state-${{ github.run_number }}
+          restore-keys: |
+            corpus-state-
+
+      - name: Collect from HuggingFace
+        run: |
+          uv run mozhi collect --source huggingface \
+            --limit ${{ github.event.inputs.hf_limit || '10000' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+      - name: Collect from Wikipedia
+        run: |
+          uv run mozhi collect --source wikipedia \
+            --limit ${{ github.event.inputs.wiki_limit || '500' }}
+
+      - name: Collect from Project Madurai
+        run: |
+          uv run mozhi collect --source madurai \
+            --limit ${{ github.event.inputs.madurai_limit || '50' }}
+
+      - name: Process pipeline
+        run: uv run mozhi process
+
+      - name: Publish to HuggingFace
+        run: uv run mozhi publish --repo mozhi-ai/tamil-corpus
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus-run-${{ github.run_number }}
+          path: |
+            corpus/raw/*/.checkpoint
+            corpus/processed/*.jsonl
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Corpus Collection Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          if [ -f corpus/processed/*.jsonl ]; then
+            DOCS=$(wc -l < corpus/processed/*.jsonl 2>/dev/null || echo "0")
+            echo "| Documents processed | $DOCS |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| Run | #${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,43 @@
+# mozhi-ai corpus pipeline configuration
+
+corpus_dir: corpus
+
+collectors:
+  - name: huggingface
+    enabled: true
+    params:
+      datasets:
+        - repo: ai4bharat/IndicCorpV2
+          subset: indiccorp_v2
+          split: tam_Taml
+          license: CC-0
+        - repo: allenai/c4
+          subset: ta
+          split: train
+          license: ODC-BY
+
+  - name: wikipedia
+    enabled: true
+    params:
+      language: ta
+      batch_size: 100
+      max_articles: null  # null = all
+
+  - name: madurai
+    enabled: true
+    params:
+      start_id: 1
+      end_id: 395
+      delay_seconds: 2.0  # be respectful to the server
+
+pipeline:
+  min_language_score: 0.7
+  min_text_length: 50
+  max_text_length: 100000
+  dedup_threshold: 0.8
+  tamil_char_ratio_min: 0.5
+
+publish:
+  repo_id: mozhi-ai/tamil-corpus
+  private: false
+  commit_message_prefix: "corpus: daily update"

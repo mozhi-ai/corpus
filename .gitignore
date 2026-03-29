@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Corpus data (large files — don't commit raw/processed data)
+corpus/raw/
+corpus/processed/
+corpus/published/
+corpus/dedup_index/
+corpus/models/
+
+# Models & checkpoints
+models/
+checkpoints/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+
+# Jupyter
+.ipynb_checkpoints/
+
+# uv
+uv.lock
+
+# Coverage
+.coverage
+htmlcov/
