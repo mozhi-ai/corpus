@@ -42,7 +42,11 @@ class Pipeline:
         yield from current
 
     @classmethod
-    def default(cls, config: PipelineConfig) -> Pipeline:
+    def default(
+        cls,
+        config: PipelineConfig,
+        dedup: PipelineStep | None = None,
+    ) -> Pipeline:
         """Build the standard pipeline: language → normalize → dedup → quality."""
         from mozhi.processing.dedup import ExactDedup
         from mozhi.processing.language import LanguageFilter
@@ -52,7 +56,7 @@ class Pipeline:
         steps: list[PipelineStep] = [
             LanguageFilter(min_score=config.min_language_score),
             TamilNormalizer(),
-            ExactDedup(),
+            dedup or ExactDedup(),
             QualityFilter(
                 min_length=config.min_text_length,
                 max_length=config.max_text_length,

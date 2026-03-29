@@ -93,10 +93,14 @@ def process(ctx: click.Context) -> None:
     from datetime import UTC, datetime
 
     from mozhi.models import CorpusStats
+    from mozhi.processing.dedup import ExactDedup
     from mozhi.processing.pipeline import Pipeline
     from mozhi.utils.io import read_jsonl, write_jsonl
 
-    pipeline = Pipeline.default(config.pipeline)
+    # Load persistent dedup index if it exists
+    dedup_path = config.corpus_dir / "dedup_index" / "hashes.txt"
+    dedup = ExactDedup.load(dedup_path)
+    pipeline = Pipeline.default(config.pipeline, dedup=dedup)
 
     # Gather all raw JSONL files
     raw_dir = config.corpus_dir / "raw"
@@ -124,6 +128,10 @@ def process(ctx: click.Context) -> None:
             yield doc
 
     count = write_jsonl(_track_stats(processed_docs), output_path)
+
+    # Save dedup index for next run
+    dedup.save(dedup_path)
+
     click.echo(f"Processed {count:,} documents → {output_path}")
     click.echo(stats.summary())
 

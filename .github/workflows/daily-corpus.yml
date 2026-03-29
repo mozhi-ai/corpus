@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       hf_limit:
-        description: 'Limit docs per HuggingFace dataset'
+        description: 'Limit docs from HuggingFace datasets'
         required: false
         default: '10000'
       wiki_limit:
@@ -20,6 +20,7 @@ on:
         default: '50'
 
 env:
+  HF_REPO: mozhi-ai/tamil-corpus
   UV_SYSTEM_PYTHON: 1
 
 jobs:
@@ -42,23 +43,55 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Restore corpus state
+      # --- Restore persistent state from HF repo ---
+      - name: Restore pipeline state
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          mkdir -p corpus/raw/wikipedia corpus/raw/madurai corpus/dedup_index corpus/models
+
+          # Download checkpoints and dedup state from HF repo
+          for file in .meta/wikipedia-checkpoint.json .meta/madurai-checkpoint.json .meta/dedup-hashes.txt; do
+            huggingface-cli download $HF_REPO "$file" \
+              --local-dir corpus/state --quiet 2>/dev/null || true
+          done
+
+          # Place checkpoints where collectors expect them
+          if [ -f corpus/state/.meta/wikipedia-checkpoint.json ]; then
+            cp corpus/state/.meta/wikipedia-checkpoint.json corpus/raw/wikipedia/.checkpoint
+            echo "Restored Wikipedia checkpoint"
+          fi
+          if [ -f corpus/state/.meta/madurai-checkpoint.json ]; then
+            cp corpus/state/.meta/madurai-checkpoint.json corpus/raw/madurai/.checkpoint
+            echo "Restored Madurai checkpoint"
+          fi
+          if [ -f corpus/state/.meta/dedup-hashes.txt ]; then
+            cp corpus/state/.meta/dedup-hashes.txt corpus/dedup_index/hashes.txt
+            echo "Restored dedup index ($(wc -l < corpus/dedup_index/hashes.txt) hashes)"
+          fi
+
+      # --- Download fastText model (cached) ---
+      - name: Cache fastText model
         uses: actions/cache@v4
         with:
-          path: |
-            corpus/raw/*/.checkpoint
-            corpus/dedup_index/
-            corpus/models/lid.176.bin
-          key: corpus-state-${{ github.run_number }}
-          restore-keys: |
-            corpus-state-
+          path: corpus/models/lid.176.bin
+          key: fasttext-lid176
 
+      - name: Download fastText model
+        if: ${{ !hashFiles('corpus/models/lid.176.bin') }}
+        run: |
+          mkdir -p corpus/models
+          wget -q -O corpus/models/lid.176.bin \
+            https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
+          echo "Downloaded fastText model ($(du -h corpus/models/lid.176.bin | cut -f1))"
+
+      # --- Collect from all sources ---
       - name: Collect from HuggingFace
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           uv run mozhi collect --source huggingface \
             --limit ${{ github.event.inputs.hf_limit || '10000' }}
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
       - name: Collect from Wikipedia
         run: |
@@ -70,34 +103,66 @@ jobs:
           uv run mozhi collect --source madurai \
             --limit ${{ github.event.inputs.madurai_limit || '50' }}
 
-      - name: Process pipeline
+      # --- Process ---
+      - name: Run processing pipeline
         run: uv run mozhi process
 
+      # --- Publish ---
       - name: Publish to HuggingFace
-        run: uv run mozhi publish --repo mozhi-ai/tamil-corpus
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: uv run mozhi publish --repo $HF_REPO
 
-      - name: Upload logs
+      # --- Save persistent state back to HF repo ---
+      - name: Save pipeline state
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: corpus-run-${{ github.run_number }}
-          path: |
-            corpus/raw/*/.checkpoint
-            corpus/processed/*.jsonl
-          retention-days: 30
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          mkdir -p corpus/state/.meta
 
-      - name: Summary
+          # Save checkpoints
+          [ -f corpus/raw/wikipedia/.checkpoint ] && \
+            cp corpus/raw/wikipedia/.checkpoint corpus/state/.meta/wikipedia-checkpoint.json
+          [ -f corpus/raw/madurai/.checkpoint ] && \
+            cp corpus/raw/madurai/.checkpoint corpus/state/.meta/madurai-checkpoint.json
+
+          # Save dedup hashes
+          [ -f corpus/dedup_index/hashes.txt ] && \
+            cp corpus/dedup_index/hashes.txt corpus/state/.meta/dedup-hashes.txt
+
+          # Push state files to HF repo
+          for file in corpus/state/.meta/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              huggingface-cli upload $HF_REPO "$file" ".meta/$filename" \
+                --repo-type dataset --quiet 2>/dev/null || true
+              echo "Saved $filename to HF repo"
+            fi
+          done
+
+      # --- Job summary ---
+      - name: Generate summary
         if: always()
         run: |
-          echo "## Corpus Collection Run" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Corpus Collection Run #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          if [ -f corpus/processed/*.jsonl ]; then
-            DOCS=$(wc -l < corpus/processed/*.jsonl 2>/dev/null || echo "0")
-            echo "| Documents processed | $DOCS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|---------|" >> $GITHUB_STEP_SUMMARY
+
+          if ls corpus/raw/*/2026-*.jsonl 1>/dev/null 2>&1; then
+            for f in corpus/raw/*/2026-*.jsonl; do
+              source=$(basename $(dirname $f))
+              count=$(wc -l < "$f" 2>/dev/null || echo "0")
+              echo "| Raw ($source) | $count docs |" >> $GITHUB_STEP_SUMMARY
+            done
           fi
-          echo "| Run | #${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Triggered by | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+
+          if ls corpus/processed/*.jsonl 1>/dev/null 2>&1; then
+            PROCESSED=$(wc -l < corpus/processed/*.jsonl 2>/dev/null || echo "0")
+            echo "| Processed | $PROCESSED docs |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Dataset: [mozhi-ai/tamil-corpus](https://huggingface.co/datasets/${{ env.HF_REPO }})" >> $GITHUB_STEP_SUMMARY
