@@ -29,17 +29,27 @@ def jsonl_to_parquet(input_path: Path, output_path: Path) -> int:
             line = line.strip()
             if line:
                 data = json.loads(line)
-                # Flatten: drop meta dict for Parquet, keep key fields
+                # All annotation fields — no meta dict in Parquet
                 rows.append({
+                    "id": data.get("id", ""),
                     "text": data["text"],
                     "source": data["source"],
                     "url": data.get("url", ""),
                     "license": data.get("license", ""),
                     "date_collected": data.get("date_collected", ""),
+                    "domain": data.get("domain", ""),
+                    "register": data.get("register", ""),
+                    "title": data.get("title", ""),
                     "language_score": float(data.get("language_score", 0.0)),
                     "quality_score": float(data.get("quality_score", 0.0)),
-                    "domain": data.get("meta", {}).get("domain", ""),
-                    "register": data.get("meta", {}).get("register", ""),
+                    "tamil_char_ratio": float(data.get("tamil_char_ratio", 0.0)),
+                    "unique_word_ratio": float(data.get("unique_word_ratio", 0.0)),
+                    "avg_word_length": float(data.get("avg_word_length", 0.0)),
+                    "word_count": int(data.get("word_count", 0)),
+                    "char_count": int(data.get("char_count", 0)),
+                    "sentence_count": int(data.get("sentence_count", 0)),
+                    "pii_count": int(data.get("pii_count", 0)),
+                    "has_code_switching": bool(data.get("has_code_switching", False)),
                 })
 
     if not rows:
@@ -64,6 +74,14 @@ def generate_dataset_card(stats: CorpusStats, repo_id: str) -> str:
     license_rows = ""
     for lic, count in sorted(stats.licenses.items(), key=lambda x: -x[1]):
         license_rows += f"| {lic} | {count:,} |\n"
+
+    domain_rows = ""
+    for domain, count in sorted(stats.domains.items(), key=lambda x: -x[1]):
+        domain_rows += f"| {domain} | {count:,} |\n"
+
+    register_rows = ""
+    for register, count in sorted(stats.registers.items(), key=lambda x: -x[1]):
+        register_rows += f"| {register} | {count:,} |\n"
 
     return f"""---
 language:
@@ -95,7 +113,7 @@ Collects text from classical literature, Wikipedia, news, and web sources.
 |--------|-------|
 | **Total Documents** | {stats.total_documents:,} |
 | **Total Characters** | {stats.total_characters:,} |
-| **Est. Words** | {stats.total_words:,} |
+| **Total Words** | {stats.total_words:,} |
 | **Deduplicated** | {stats.dedup_count:,} removed |
 | **Quality Filtered** | {stats.filtered_count:,} removed |
 | **Last Updated** | {today} |
@@ -110,19 +128,39 @@ Collects text from classical literature, Wikipedia, news, and web sources.
 | License | Documents |
 |---------|-----------|
 {license_rows}
+### Domains
+
+| Domain | Documents |
+|--------|-----------|
+{domain_rows}
+### Registers
+
+| Register | Documents |
+|----------|-----------|
+{register_rows}
 ## Data Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `id` | string | Unique document ID (SHA-256 content hash) |
 | `text` | string | The Tamil text content |
 | `source` | string | Data source identifier |
 | `url` | string | Source URL (when available) |
 | `license` | string | License of the source data |
 | `date_collected` | string | Collection date (ISO 8601) |
+| `domain` | string | Content domain: `news`, `encyclopedia`, `classical_literature`, `web` |
+| `register` | string | Language register: `classical`, `formal`, `colloquial` |
+| `title` | string | Document title (Wikipedia, Madurai) |
 | `language_score` | float | fastText Tamil confidence (0-1) |
 | `quality_score` | float | Quality heuristic score (0-1) |
-| `domain` | string | Content domain (news, literature, etc.) |
-| `register` | string | Language register (classical, formal, colloquial) |
+| `tamil_char_ratio` | float | Ratio of Tamil script chars to total non-whitespace |
+| `unique_word_ratio` | float | Ratio of unique words to total words |
+| `avg_word_length` | float | Average characters per word |
+| `word_count` | int | Total word count |
+| `char_count` | int | Total character count |
+| `sentence_count` | int | Sentence count (based on punctuation) |
+| `pii_count` | int | Detected PII instances (emails, phones, IPs) |
+| `has_code_switching` | bool | Contains significant English (Tanglish) |
 
 ## Processing Pipeline
 
@@ -132,6 +170,7 @@ Every document passes through:
 2. **Unicode Normalization** — NFKC + Tamil-specific normalization (indic_nlp_library)
 3. **Exact Deduplication** — SHA-256 content hashing
 4. **Quality Filtering** — length, Tamil character ratio, uniqueness, boilerplate detection
+5. **Annotation** — domain, register, text stats, PII detection, code-switching
 
 ## Sources
 

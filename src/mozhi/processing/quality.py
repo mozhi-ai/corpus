@@ -57,7 +57,7 @@ class QualityFilter:
         self,
         min_length: int = 50,
         max_length: int = 100_000,
-        tamil_char_ratio_min: float = 0.3,
+        tamil_char_ratio_min: float = 0.5,
         unique_word_ratio_min: float = 0.1,
     ) -> None:
         self.min_length = min_length

@@ -47,7 +47,8 @@ class Pipeline:
         config: PipelineConfig,
         dedup: PipelineStep | None = None,
     ) -> Pipeline:
-        """Build the standard pipeline: language → normalize → dedup → quality."""
+        """Build the standard pipeline: language → normalize → dedup → quality → annotate."""
+        from mozhi.processing.annotator import DocumentAnnotator
         from mozhi.processing.dedup import ExactDedup
         from mozhi.processing.language import LanguageFilter
         from mozhi.processing.normalizer import TamilNormalizer
@@ -62,5 +63,6 @@ class Pipeline:
                 max_length=config.max_text_length,
                 tamil_char_ratio_min=config.tamil_char_ratio_min,
             ),
+            DocumentAnnotator(),
         ]
         return cls(steps)

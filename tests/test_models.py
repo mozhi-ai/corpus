@@ -44,6 +44,32 @@ class TestDocument:
         assert restored.language_score == doc.language_score
         assert restored.meta == doc.meta
 
+    def test_annotation_fields_roundtrip(self) -> None:
+        doc = Document(
+            text="test",
+            source="test",
+            id="abc123",
+            domain="news",
+            register="formal",
+            title="My Title",
+            word_count=10,
+            char_count=50,
+            sentence_count=2,
+            tamil_char_ratio=0.9,
+            unique_word_ratio=0.8,
+            avg_word_length=5.0,
+            pii_count=1,
+            has_code_switching=True,
+        )
+        restored = Document.from_dict(doc.to_dict())
+        assert restored.id == "abc123"
+        assert restored.domain == "news"
+        assert restored.register == "formal"
+        assert restored.title == "My Title"
+        assert restored.word_count == 10
+        assert restored.pii_count == 1
+        assert restored.has_code_switching is True
+
     def test_json_roundtrip(self) -> None:
         doc = Document(text="தமிழ் மொழி", source="wiki", url=None)
         json_str = doc.to_json()
