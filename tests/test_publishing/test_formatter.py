@@ -93,7 +93,7 @@ class TestGenerateDatasetCard:
         stats = CorpusStats(total_documents=10)
         card = generate_dataset_card(stats, "test/repo")
         assert "load_dataset" in card
-        assert 'test/repo' in card
+        assert "test/repo" in card
 
     def test_has_citation(self) -> None:
         stats = CorpusStats(total_documents=10)

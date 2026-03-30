@@ -118,9 +118,11 @@ class WikipediaCollector(BaseCollector):
         import requests
 
         session = requests.Session()
-        session.headers.update({
-            "User-Agent": "mozhi-ai/0.1 (Tamil corpus project; https://github.com/mozhi-ai)",
-        })
+        session.headers.update(
+            {
+                "User-Agent": "mozhi-ai/0.1 (Tamil corpus project; https://github.com/mozhi-ai)",
+            }
+        )
         api_url = f"https://{self.language}.wikipedia.org/w/api.php"
 
         params: dict[str, str | int] = {

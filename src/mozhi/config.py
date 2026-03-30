@@ -75,14 +75,14 @@ def load_config(path: Path) -> MozhiConfig:
     ]
 
     pipeline_raw = raw.get("pipeline", {})
-    pipeline = PipelineConfig(**{
-        k: v for k, v in pipeline_raw.items() if k in PipelineConfig.__dataclass_fields__
-    })
+    pipeline = PipelineConfig(
+        **{k: v for k, v in pipeline_raw.items() if k in PipelineConfig.__dataclass_fields__}
+    )
 
     publish_raw = raw.get("publish", {})
-    publish = PublishConfig(**{
-        k: v for k, v in publish_raw.items() if k in PublishConfig.__dataclass_fields__
-    })
+    publish = PublishConfig(
+        **{k: v for k, v in publish_raw.items() if k in PublishConfig.__dataclass_fields__}
+    )
 
     corpus_dir = Path(raw.get("corpus_dir", "corpus"))
 

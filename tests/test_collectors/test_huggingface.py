@@ -43,10 +43,12 @@ class TestHuggingFaceCollector:
 
     @patch(PATCH_LOAD)
     def test_collect_yields_documents(self, mock_load: MagicMock, tmp_path: Path) -> None:
-        mock_load.return_value = _mock_dataset([
-            {"text": "தமிழ் மொழி"},
-            {"text": "வணக்கம் உலகம்"},
-        ])
+        mock_load.return_value = _mock_dataset(
+            [
+                {"text": "தமிழ் மொழி"},
+                {"text": "வணக்கம் உலகம்"},
+            ]
+        )
 
         collector = _make_collector(tmp_path)
         docs = list(collector.collect())
@@ -59,9 +61,7 @@ class TestHuggingFaceCollector:
 
     @patch(PATCH_LOAD)
     def test_collect_with_limit(self, mock_load: MagicMock, tmp_path: Path) -> None:
-        mock_load.return_value = _mock_dataset([
-            {"text": f"doc {i}"} for i in range(100)
-        ])
+        mock_load.return_value = _mock_dataset([{"text": f"doc {i}"} for i in range(100)])
 
         collector = _make_collector(tmp_path)
         docs = list(collector.collect(limit=5))
@@ -70,12 +70,14 @@ class TestHuggingFaceCollector:
 
     @patch(PATCH_LOAD)
     def test_skips_empty_text(self, mock_load: MagicMock, tmp_path: Path) -> None:
-        mock_load.return_value = _mock_dataset([
-            {"text": ""},
-            {"text": "   "},
-            {"text": "valid text"},
-            {"text": None},
-        ])
+        mock_load.return_value = _mock_dataset(
+            [
+                {"text": ""},
+                {"text": "   "},
+                {"text": "valid text"},
+                {"text": None},
+            ]
+        )
 
         collector = _make_collector(tmp_path)
         docs = list(collector.collect())

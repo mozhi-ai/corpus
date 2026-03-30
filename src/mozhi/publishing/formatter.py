@@ -30,27 +30,29 @@ def jsonl_to_parquet(input_path: Path, output_path: Path) -> int:
             if line:
                 data = json.loads(line)
                 # All annotation fields — no meta dict in Parquet
-                rows.append({
-                    "id": data.get("id", ""),
-                    "text": data["text"],
-                    "source": data["source"],
-                    "url": data.get("url", ""),
-                    "license": data.get("license", ""),
-                    "date_collected": data.get("date_collected", ""),
-                    "domain": data.get("domain", ""),
-                    "register": data.get("register", ""),
-                    "title": data.get("title", ""),
-                    "language_score": float(data.get("language_score", 0.0)),
-                    "quality_score": float(data.get("quality_score", 0.0)),
-                    "tamil_char_ratio": float(data.get("tamil_char_ratio", 0.0)),
-                    "unique_word_ratio": float(data.get("unique_word_ratio", 0.0)),
-                    "avg_word_length": float(data.get("avg_word_length", 0.0)),
-                    "word_count": int(data.get("word_count", 0)),
-                    "char_count": int(data.get("char_count", 0)),
-                    "sentence_count": int(data.get("sentence_count", 0)),
-                    "pii_count": int(data.get("pii_count", 0)),
-                    "has_code_switching": bool(data.get("has_code_switching", False)),
-                })
+                rows.append(
+                    {
+                        "id": data.get("id", ""),
+                        "text": data["text"],
+                        "source": data["source"],
+                        "url": data.get("url", ""),
+                        "license": data.get("license", ""),
+                        "date_collected": data.get("date_collected", ""),
+                        "domain": data.get("domain", ""),
+                        "register": data.get("register", ""),
+                        "title": data.get("title", ""),
+                        "language_score": float(data.get("language_score", 0.0)),
+                        "quality_score": float(data.get("quality_score", 0.0)),
+                        "tamil_char_ratio": float(data.get("tamil_char_ratio", 0.0)),
+                        "unique_word_ratio": float(data.get("unique_word_ratio", 0.0)),
+                        "avg_word_length": float(data.get("avg_word_length", 0.0)),
+                        "word_count": int(data.get("word_count", 0)),
+                        "char_count": int(data.get("char_count", 0)),
+                        "sentence_count": int(data.get("sentence_count", 0)),
+                        "pii_count": int(data.get("pii_count", 0)),
+                        "has_code_switching": bool(data.get("has_code_switching", False)),
+                    }
+                )
 
     if not rows:
         logger.warning("No rows to convert")

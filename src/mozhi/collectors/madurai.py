@@ -138,9 +138,11 @@ class MaduraiCollector(BaseCollector):
         import requests
 
         session = requests.Session()
-        session.headers.update({
-            "User-Agent": "mozhi-ai/0.1 (Tamil corpus project; educational use)",
-        })
+        session.headers.update(
+            {
+                "User-Agent": "mozhi-ai/0.1 (Tamil corpus project; educational use)",
+            }
+        )
 
         # Resume from checkpoint
         last_id_str = self._read_checkpoint("last_id")
