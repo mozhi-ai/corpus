@@ -7,14 +7,29 @@ collectors:
     enabled: true
     params:
       datasets:
+        # News & articles (formal register)
         - repo: ai4bharat/IndicCorpV2
           subset: indiccorp_v2
           split: tam_Taml
           license: CC-0
+        # Web crawl (colloquial register)
         - repo: allenai/c4
           subset: ta
           split: train
           license: ODC-BY
+        # OSCAR Tamil cleaned (mixed register, high quality)
+        - repo: AnanthZeke/oscar_tamil_clean
+          split: train
+          license: CC-BY-SA-4.0
+        # MADLAD-400 Tamil (cleaned web, large)
+        - repo: Hemanth-thunder/tamil-madlad-400
+          split: clean
+          license: CC-BY-4.0
+        # Tamil news with categories
+        - repo: livinNector/tamil_news_dataset
+          split: train
+          license: CC-0
+          text_field: news_article
 
   - name: wikipedia
     enabled: true

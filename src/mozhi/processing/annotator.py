@@ -31,6 +31,9 @@ _IP_ADDR = re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b")
 _SOURCE_DOMAIN_MAP: dict[str, str] = {
     "hf:ai4bharat/IndicCorpV2": "news",
     "hf:allenai/c4": "web",
+    "hf:AnanthZeke/oscar_tamil_clean": "web",
+    "hf:Hemanth-thunder/tamil-madlad-400": "web",
+    "hf:livinNector/tamil_news_dataset": "news",
     "wikipedia": "encyclopedia",
     "project_madurai": "classical_literature",
 }
@@ -39,6 +42,9 @@ _SOURCE_DOMAIN_MAP: dict[str, str] = {
 _SOURCE_REGISTER_MAP: dict[str, str] = {
     "hf:ai4bharat/IndicCorpV2": "formal",
     "hf:allenai/c4": "colloquial",
+    "hf:AnanthZeke/oscar_tamil_clean": "colloquial",
+    "hf:Hemanth-thunder/tamil-madlad-400": "colloquial",
+    "hf:livinNector/tamil_news_dataset": "formal",
     "wikipedia": "formal",
     "project_madurai": "classical",
 }
